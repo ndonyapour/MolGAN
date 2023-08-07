@@ -323,8 +323,8 @@ class SparseMolecularDataset():
 
 if __name__ == '__main__':
     data = SparseMolecularDataset()
-    data.generate('data/gdb9.sdf', filters=lambda x: x.GetNumAtoms() <= 9)
-    data.save('data/gdb9_9nodes.sparsedataset')
+    data.generate('../data/gdb9.sdf', filters=lambda x: x.GetNumAtoms() <= 9)
+    data.save('../data/gdb9_9nodes.sparsedataset')
 
     # data = SparseMolecularDataset()
     # data.generate('data/qm9_5k.smi', validation=0.00021, test=0.00021)  # , filters=lambda x: x.GetNumAtoms() <= 9)
