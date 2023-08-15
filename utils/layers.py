@@ -1,4 +1,5 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
 def graph_convolution_layer(inputs, units, training, activation=None, dropout_rate=0.):
