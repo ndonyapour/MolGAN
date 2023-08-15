@@ -2,7 +2,8 @@ import time
 import os
 import pickle
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from datetime import datetime
 from datetime import timedelta
 from utils.progress_bar import ProgressBar
