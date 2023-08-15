@@ -1,4 +1,5 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from utils.layers import multi_graph_convolution_layers, graph_aggregation_layer, multi_dense_layers
 
 

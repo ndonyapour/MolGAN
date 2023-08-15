@@ -1,4 +1,5 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 from utils.sparse_molecular_dataset import SparseMolecularDataset
 from utils.trainer import Trainer
@@ -209,6 +210,6 @@ trainer.train(batch_dim=batch_dim,
               test_fetch_dict=test_fetch_dict,
               test_feed_dict=test_feed_dict,
               save_every=save_every,
-              directory='', # here users need to first create and then specify a folder where to save the model
+              directory='./trained_models', # here users need to first create and then specify a folder where to save the model
               _eval_update=_eval_update,
               _test_update=_test_update)
