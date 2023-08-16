@@ -8,12 +8,11 @@ from rdkit.Chem import Crippen
 import math
 import numpy as np
 
-NP_model = pickle.load(gzip.open('data/NP_score.pkl.gz'))
-SA_model = {i[j]: float(i[0]) for i in pickle.load(gzip.open('data/SA_score.pkl.gz')) for j in range(1, len(i))}
+# NP_model = pickle.load(gzip.open('data/NP_score.pkl.gz'))
+# SA_model = {i[j]: float(i[0]) for i in pickle.load(gzip.open('data/SA_score.pkl.gz')) for j in range(1, len(i))}
 
 
-class MolecularMetrics(object):
-
+class MolecularMetrics(object):          
     @staticmethod
     def _avoid_sanitization_error(op):
         try:
@@ -98,7 +97,7 @@ class MolecularMetrics(object):
     #             for m0_, m1_ in zip(m0, m1)])
 
     @staticmethod
-    def natural_product_scores(mols, norm=False):
+    def natural_product_scores(mols, NP_model, norm=False):
 
         # calculating the score
         scores = [sum(NP_model.get(bit, 0)
@@ -133,7 +132,7 @@ class MolecularMetrics(object):
         return scores
 
     @staticmethod
-    def _compute_SAS(mol):
+    def _compute_SAS(mol, SA_model):
         fp = Chem.rdMolDescriptors.GetMorganFingerprint(mol, 2)
         fps = fp.GetNonzeroElements()
         score1 = 0.
@@ -197,8 +196,8 @@ class MolecularMetrics(object):
         return sascore
 
     @staticmethod
-    def synthetic_accessibility_score_scores(mols, norm=False):
-        scores = [MolecularMetrics._compute_SAS(mol) if mol is not None else None for mol in mols]
+    def synthetic_accessibility_score_scores(mols, SA_model, norm=False):
+        scores = [MolecularMetrics._compute_SAS(mol, SA_model) if mol is not None else None for mol in mols]
         scores = np.array(list(map(lambda x: 10 if x is None else x, scores)))
         scores = np.clip(MolecularMetrics.remap(scores, 5, 1.5), 0.0, 1.0) if norm else scores
 
@@ -223,11 +222,12 @@ class MolecularMetrics(object):
         return score
 
     @staticmethod
-    def drugcandidate_scores(mols, data):
+    def drugcandidate_scores(mols, SA_model, data):
 
         scores = (MolecularMetrics.constant_bump(
             MolecularMetrics.water_octanol_partition_coefficient_scores(mols, norm=True), 0.210,
             0.945) + MolecularMetrics.synthetic_accessibility_score_scores(mols,
+                                                                           SA_model,
                                                                            norm=True) + MolecularMetrics.novel_scores(
             mols, data) + (1 - MolecularMetrics.novel_scores(mols, data)) * 0.3) / 4
 

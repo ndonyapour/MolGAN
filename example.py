@@ -1,3 +1,8 @@
+import argparse
+
+import pickle
+import gzip
+
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
@@ -10,18 +15,53 @@ from models import encoder_rgcn, decoder_adj, decoder_dot, decoder_rnn
 
 from optimizers.gan import GraphGANOptimizer
 
+
+def parse_arguments() -> argparse.Namespace:
+    """ This function parses the arguments.
+
+    Returns:
+        argparse.Namespace: The command line arguments
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_data_path', required=True)
+    parser.add_argument('--input_NP_Score_path', required=True)
+    parser.add_argument('--input_SA_Score_path', required=True)
+    parser.add_argument('--output_log_path', required=True)
+    parser.add_argument('--output_model_dir', required=True)
+    parser.add_argument('--validation_metrics', required=False, default='validity,sas')
+    parser.add_argument('--num_epochs', required=False, default=100)
+    parser.add_argument('--save_frequency', required=False, default=1)
+
+    args = parser.parse_args()
+    return args
+
+
+args = parse_arguments()
+
+# The method was introduced in the paper titled
+# "MolGAN: An Implicit Generative Model for Small Molecular Graphs."
+# You can access comprehensive information about this paper
+# at https://arxiv.org/pdf/1805.11973.pdf. The specific numerical values
+# for batch size, decoder, and discriminator parameters are derived from this paper.
 batch_dim = 128
 la = 1
 dropout = 0
 n_critic = 5
-metric = 'validity,sas'
+metric = args.validation_metrics
 n_samples = 5000
 z_dim = 8
-epochs = 10
-save_every = 1 # May lead to errors if left as None
+epochs = int(args.num_epochs)
+save_every = int(args.save_frequency) # May lead to errors if left as None
+
+
+# The unpicking of score files is moved from "molecular_metrics.py"
+# to here because the path to score files is an argument of this script.
+NP_model = pickle.load(gzip.open(args.input_NP_Score_path))
+SA_model = {i[j]: float(i[0]) for i in pickle.load(gzip.open(args.input_SA_Score_path)) for j in range(1, len(i))}
+
 
 data = SparseMolecularDataset()
-data.load('data/gdb9_9nodes.sparsedataset')
+data.load(args.input_data_path)
 
 steps = (len(data) // batch_dim)
 
@@ -133,26 +173,27 @@ def test_feed_dict(model, optimizer, batch_dim):
 
 def reward(mols):
     rr = 1.
+    mols_metrics = MolecularMetrics()   
     for m in ('logp,sas,qed,unique' if metric == 'all' else metric).split(','):
 
         if m == 'np':
-            rr *= MolecularMetrics.natural_product_scores(mols, norm=True)
+            rr *= mols_metrics.natural_product_scores(mols, NP_model, norm=True)
         elif m == 'logp':
-            rr *= MolecularMetrics.water_octanol_partition_coefficient_scores(mols, norm=True)
+            rr *= mols_metrics.water_octanol_partition_coefficient_scores(mols, norm=True)
         elif m == 'sas':
-            rr *= MolecularMetrics.synthetic_accessibility_score_scores(mols, norm=True)
+            rr *= mols_metrics.synthetic_accessibility_score_scores(mols, SA_model, norm=True)
         elif m == 'qed':
-            rr *= MolecularMetrics.quantitative_estimation_druglikeness_scores(mols, norm=True)
+            rr *= mols_metrics.quantitative_estimation_druglikeness_scores(mols, norm=True)
         elif m == 'novelty':
-            rr *= MolecularMetrics.novel_scores(mols, data)
+            rr *= mols_metrics.novel_scores(mols, data)
         elif m == 'dc':
-            rr *= MolecularMetrics.drugcandidate_scores(mols, data)
+            rr *= mols_metrics.drugcandidate_scores(mols, SA_model, data)
         elif m == 'unique':
-            rr *= MolecularMetrics.unique_scores(mols)
+            rr *= mols_metrics.unique_scores(mols)
         elif m == 'diversity':
-            rr *= MolecularMetrics.diversity_scores(mols, data)
+            rr *= mols_metrics.diversity_scores(mols, data)
         elif m == 'validity':
-            rr *= MolecularMetrics.valid_scores(mols)
+            rr *= mols_metrics.valid_scores(mols)
         else:
             raise RuntimeError('{} is not defined as a metric'.format(m))
 
@@ -161,7 +202,8 @@ def reward(mols):
 
 def _eval_update(i, epochs, min_epochs, model, optimizer, batch_dim, eval_batch):
     mols = samples(data, model, session, model.sample_z(n_samples), sample=True)
-    m0, m1 = all_scores(mols, data, norm=True)
+    
+    m0, m1 = all_scores(mols, data, NP_model, SA_model, norm=True)
     m0 = {k: np.array(v)[np.nonzero(v)].mean() for k, v in m0.items()}
     m0.update(m1)
     return m0
@@ -169,7 +211,7 @@ def _eval_update(i, epochs, min_epochs, model, optimizer, batch_dim, eval_batch)
 
 def _test_update(model, optimizer, batch_dim, test_batch):
     mols = samples(data, model, session, model.sample_z(n_samples), sample=True)
-    m0, m1 = all_scores(mols, data, norm=True)
+    m0, m1 = all_scores(mols, data, NP_model, SA_model, norm=True)
     m0 = {k: np.array(v)[np.nonzero(v)].mean() for k, v in m0.items()}
     m0.update(m1)
     return m0
@@ -210,6 +252,7 @@ trainer.train(batch_dim=batch_dim,
               test_fetch_dict=test_fetch_dict,
               test_feed_dict=test_feed_dict,
               save_every=save_every,
-              directory='./trained_models', # here users need to first create and then specify a folder where to save the model
+              directory=args.output_model_dir, # here users need to first create and then specify a folder where to save the model
               _eval_update=_eval_update,
-              _test_update=_test_update)
+              _test_update=_test_update,
+              output_log_path=args.output_log_path)

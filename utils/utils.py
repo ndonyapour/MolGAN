@@ -1,3 +1,6 @@
+import pickle
+import gzip
+
 import numpy as np
 
 from sklearn.metrics import classification_report as sk_classification_report
@@ -79,14 +82,15 @@ def samples(data, model, session, embeddings, sample=False):
     return mols
 
 
-def all_scores(mols, data, norm=False, reconstruction=False):
+def all_scores(mols, data, NP_model, SA_model, norm=False, reconstruction=False):
+    
     m0 = {k: list(filter(lambda e: e is not None, v)) for k, v in {
-        'NP score': MolecularMetrics.natural_product_scores(mols, norm=norm),
+        'NP score': MolecularMetrics.natural_product_scores(mols, NP_model, norm=norm),
         'QED score': MolecularMetrics.quantitative_estimation_druglikeness_scores(mols),
         'logP score': MolecularMetrics.water_octanol_partition_coefficient_scores(mols, norm=norm),
-        'SA score': MolecularMetrics.synthetic_accessibility_score_scores(mols, norm=norm),
+        'SA score': MolecularMetrics.synthetic_accessibility_score_scores(mols, SA_model, norm=norm),
         'diversity score': MolecularMetrics.diversity_scores(mols, data),
-        'drugcandidate score': MolecularMetrics.drugcandidate_scores(mols, data)}.items()}
+        'drugcandidate score': MolecularMetrics.drugcandidate_scores(mols, SA_model, data)}.items()}
 
     m1 = {'valid score': MolecularMetrics.valid_total_score(mols) * 100,
           'unique score': MolecularMetrics.unique_total_score(mols) * 100,

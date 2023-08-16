@@ -49,7 +49,7 @@ class Trainer:
               eval_batch=None, test_batch=None,
               best_fn=None, min_epochs=None, look_ahead=None,
               save_every=None, directory=None,
-              skip_first_eval=False):
+              skip_first_eval=False, output_log_path='log'):
 
         if _train_step is None:
             def _train_step(step, steps, epoch, epochs, min_epochs, model, optimizer, batch_dim):
@@ -70,7 +70,8 @@ class Trainer:
                                                                                eta))
 
                 if eval_batch is not None:
-                    pr = ProgressBar(80, eval_batch)
+                    # comment out progress bar so it doesn't pollute the CI logs
+                    # pr = ProgressBar(80, eval_batch)
                     output = defaultdict(list)
 
                     for i in range(eval_batch):
@@ -78,7 +79,7 @@ class Trainer:
                                                      feed_dict=eval_feed_dict(epoch, epochs, min_epochs, model,
                                                                               optimizer, batch_dim)).items():
                             output[k].append(v)
-                        pr.update(i + 1)
+                        #pr.update(i + 1)
 
                     self.log(date=False)
                     output = {k: np.mean(v) for k, v in output.items()}
@@ -92,6 +93,8 @@ class Trainer:
 
                 p = pprint.PrettyPrinter(indent=1, width=80)
                 self.log('Validation --> {}'.format(p.pformat(output)))
+                with open(output_log_path, mode='w', encoding='utf-8') as wfile:
+                    wfile.write('Validation --> {}'.format(p.pformat(output)))
 
                 for k in output:
                     self.print[k].append(output[k])
@@ -105,14 +108,15 @@ class Trainer:
                 self.log('End of training ({} epochs) in {}'.format(epochs, from_start))
 
                 if test_batch is not None:
-                    pr = ProgressBar(80, test_batch)
+                    # comment out progress bar so it doesn't pollute the CI logs
+                    # pr = ProgressBar(80, test_batch)
                     output = defaultdict(list)
 
                     for i in range(test_batch):
                         for k, v in self.session.run(test_fetch_dict(model, optimizer),
                                                      feed_dict=test_feed_dict(model, optimizer, batch_dim)).items():
                             output[k].append(v)
-                        pr.update(i + 1)
+                        #pr.update(i + 1)
 
                     self.log(date=False)
                     output = {k: np.mean(v) for k, v in output.items()}
@@ -125,6 +129,9 @@ class Trainer:
 
                 p = pprint.PrettyPrinter(indent=1, width=80)
                 self.log('Test --> {}'.format(p.pformat(output)))
+                with open(output_log_path, mode='a', encoding='utf-8') as wfile:
+                    wfile.write('\n \n Test --> {}'.format(p.pformat(output)))
+                
 
                 for k in output:
                     self.print['Test ' + k].append(output[k])
@@ -159,11 +166,12 @@ class Trainer:
 
             if epoch < epochs:
                 last_epoch_start_time = time.time()
-                pr = ProgressBar(80, steps)
+                # comment out progress bar so it doesn't pollute the CI logs
+                # pr = ProgressBar(80, steps)
                 for step in range(steps):
                     _train_step(steps * epoch + step, steps, epoch, epochs, min_epochs, self.model, self.optimizer,
                                 batch_dim)
-                    pr.update(step + 1)
+                    #pr.update(step + 1)
 
                 self.log(date=False)
 

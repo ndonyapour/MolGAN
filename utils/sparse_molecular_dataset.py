@@ -1,3 +1,5 @@
+import argparse
+
 import pickle
 import numpy as np
 
@@ -9,6 +11,19 @@ else:
     from utils.progress_bar import ProgressBar
 
 from datetime import datetime
+
+
+def parse_arguments() -> argparse.Namespace:
+    """ This function parses the arguments.
+
+    Returns:
+        argparse.Namespace: The command line arguments
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_sdf_path', required=True)
+    parser.add_argument('--output_data_path', required=True)
+    args = parser.parse_args()
+    return args
 
 
 class SparseMolecularDataset():
@@ -124,7 +139,8 @@ class SparseMolecularDataset():
 
     def _generate_AX(self):
         self.log('Creating features and adjacency matrices..')
-        pr = ProgressBar(60, len(self.data))
+        # comment out progress bar so it doesn't pollute the CI logs
+        # pr = ProgressBar(60, len(self.data))
 
         data = []
         smiles = []
@@ -157,7 +173,7 @@ class SparseMolecularDataset():
                 data_Le.append(Le)
                 data_Lv.append(Lv)
 
-            pr.update(i + 1)
+            #pr.update(i + 1)
 
         self.log(date=False)
         self.log('Created {} features and adjacency matrices  out of {} molecules!'.format(len(data),
@@ -321,11 +337,15 @@ class SparseMolecularDataset():
         return self.__len
 
 
-if __name__ == '__main__':
-    data = SparseMolecularDataset()
-    data.generate('../data/gdb9.sdf', filters=lambda x: x.GetNumAtoms() <= 9)
-    data.save('../data/gdb9_9nodes.sparsedataset')
 
-    # data = SparseMolecularDataset()
-    # data.generate('data/qm9_5k.smi', validation=0.00021, test=0.00021)  # , filters=lambda x: x.GetNumAtoms() <= 9)
-    # data.save('data/qm9_5k.sparsedataset')
+def main() -> None:
+    """ Reads the command line arguments and calculates net charge
+    """
+    args = parse_arguments()
+    
+    data = SparseMolecularDataset()
+    data.generate(args.input_sdf_path, filters=lambda x: x.GetNumAtoms() <= 9)
+    data.save(args.output_data_path)
+
+if __name__ == '__main__':
+    main()
