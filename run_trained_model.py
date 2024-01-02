@@ -8,13 +8,16 @@ tf.disable_v2_behavior()
 
 from utils.sparse_molecular_dataset import SparseMolecularDataset
 from utils.trainer import Trainer
+from utils.sanitize_ligand import is_valid_ligand
 from utils.utils import *
 
 from models.gan import GraphGANModel
 from models import encoder_rgcn, decoder_adj, decoder_dot, decoder_rnn
 
 from optimizers.gan import GraphGANOptimizer
+import rdkit
 from rdkit import Chem
+
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -84,13 +87,19 @@ m0, m1 = all_scores(mols, data, NP_model, SA_model, norm=True)
 valid_mols = list(filter(lambda mol: mol is not None and
                          len(Chem.rdmolops.GetMolFrags(mol))==1, mols))
 
+# We exclude the generated small molecules that are not kekulizable.
+num_notkekulizable = 0
 with Chem.SDWriter(args.output_sdf_path) as w:
-    for m in valid_mols:
-        w.write(m)
+    for mol in valid_mols:
+        valid_ligand, rdkit_mol = is_valid_ligand(mol)
+        if valid_ligand:
+            w.write(mol)
+        else:
+            num_notkekulizable += 1
 
 # Save the valid molecules into an SDF file
 with open(args.output_log_path, mode='w', encoding='utf-8') as wfile:
     wfile.write(str(m1))
     wfile.write(f'\n{len(valid_mols)}'
-                f'from {len(mols)} generated molecules are valid')
+                f'from {len(mols) - num_notkekulizable} generated molecules are valid')
     

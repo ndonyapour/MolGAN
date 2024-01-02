@@ -1,6 +1,7 @@
 #!/bin/bash
-
-wget  --no-clobber http://deepchem.io.s3-website-us-west-1.amazonaws.com/datasets/gdb9.tar.gz 
+# Download the GDB9 database
+# Hide progress bar so it doesn't pollute the CI logs
+wget -nv --no-clobber http://deepchem.io.s3-website-us-west-1.amazonaws.com/datasets/gdb9.tar.gz 
 tar xvzf gdb9.tar.gz
 rm gdb9.tar.gz
 rm gdb9.sdf.csv

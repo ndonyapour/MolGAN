@@ -4,11 +4,15 @@ import pickle
 import numpy as np
 
 from rdkit import Chem
+from rdkit import RDLogger
+RDLogger.DisableLog('rdApp.*')
 
 if __name__ == '__main__':
     from progress_bar import ProgressBar
+    from sanitize_ligand import is_valid_ligand
 else:
     from utils.progress_bar import ProgressBar
+    from utils.sanitize_ligand import is_valid_ligand
 
 from datetime import datetime
 
@@ -52,16 +56,28 @@ class SparseMolecularDataset():
         self.log('Extracting {}..'.format(filename))
 
         if filename.endswith('.sdf'):
-            self.data = list(filter(lambda x: x is not None, Chem.SDMolSupplier(filename)))
+            mols = Chem.SDMolSupplier(filename, sanitize=False)
+            self.data = []
+            for mol in mols:           
+                valid_ligand, rdkit_mol = is_valid_ligand(mol)
+                if  valid_ligand:
+                    self.data.append(rdkit_mol)
+                        
         elif filename.endswith('.smi'):
-            self.data = [Chem.MolFromSmiles(line) for line in open(filename, 'r').readlines()]
-
+            mols = open(filename, 'r').readlines()
+            self.data = []
+            for smiles in mols:
+                mol = Chem.MolFromSmiles(smiles, sanitize=False)
+                valid_ligand, rdkit_mol = is_valid_ligand(mol)
+                if valid_ligand:
+                    self.data.append(rdkit_mol)
+            
         self.data = list(map(Chem.AddHs, self.data)) if add_h else self.data
         self.data = list(filter(filters, self.data))
         self.data = self.data[:size]
 
         self.log('Extracted {} out of {} molecules {}adding Hydrogen!'.format(len(self.data),
-                                                                              len(Chem.SDMolSupplier(filename)),
+                                                                              len(mols),
                                                                               '' if add_h else 'not '))
 
         self._generate_encoders_decoders()
@@ -249,21 +265,27 @@ class SparseMolecularDataset():
                 mol.AddBond(int(start), int(end), self.bond_decoder_m[edge_labels[start, end]])
 
         if strict:
-            try:
-                Chem.SanitizeMol(mol)
-            except:
+            valid_ligand, rdkit_mol = is_valid_ligand(mol)
+            if valid_ligand:
+               mol = rdkit_mol
+            else:
                 mol = None
 
         return mol
 
     def seq2mol(self, seq, strict=False):
-        mol = Chem.MolFromSmiles(''.join([self.smiles_decoder_m[e] for e in seq if e != 0]))
 
-        if strict:
-            try:
-                Chem.SanitizeMol(mol)
-            except:
-                mol = None
+        try:
+            mol = Chem.MolFromSmiles(''.join([self.smiles_decoder_m[e] for e in seq if e != 0]),
+                                     catchErrors=True)
+        except:
+            mol = None
+
+        valid_ligand, rdkit_mol = is_valid_ligand(mol)
+        if valid_ligand:
+            mol = rdkit_mol
+        else:
+            mol = None
 
         return mol
 
