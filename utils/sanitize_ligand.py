@@ -3,13 +3,17 @@
 Handle molecules with sanitization errors by assign formal charge based on valence."""
 # https://depth-first.com/articles/2020/02/10/a-comprehensive-treatment-of-aromaticity-in-the-smiles-language/
 # The code has been adapted from https://raw.githubusercontent.com/PolusAI/mm-workflows/main/examples/diffdock/sanitize_ligand.py
+import os
 from pathlib import Path
 from typing import Dict, Tuple
 
 import rdkit
 from rdkit import Chem
-from rdkit import RDLogger
-RDLogger.DisableLog('rdApp.*')
+
+
+if os.getenv('RDKIT_ERROR_LOGGING') == "OFF":
+    from rdkit import RDLogger
+    RDLogger.DisableLog('rdApp.*')
 
 def adjust_formal_charges(molecule: Chem.rdchem.RWMol) -> Chem.rdchem.RWMol:
     """Sometimes input structures do not have correct formal charges corresponding

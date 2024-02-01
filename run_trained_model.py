@@ -1,3 +1,4 @@
+import os
 import argparse
 
 import pickle
@@ -19,6 +20,9 @@ import rdkit
 from rdkit import Chem
 
 
+if os.getenv('RDKIT_ERROR_LOGGING') == "OFF":
+    from rdkit import RDLogger
+    RDLogger.DisableLog('rdApp.*')
 
 def parse_arguments() -> argparse.Namespace:
     """ This function parses the arguments.
