@@ -91,8 +91,7 @@ valid_mols = list(filter(lambda mol: mol is not None and
 num_notkekulizable = 0
 with Chem.SDWriter(args.output_sdf_path) as w:
     for mol in valid_mols:
-        valid_ligand, rdkit_mol = is_valid_ligand(mol)
-        if valid_ligand:
+        if Chem.SanitizeMol(mol, catchErrors=True) == 0:
             w.write(mol)
         else:
             num_notkekulizable += 1
