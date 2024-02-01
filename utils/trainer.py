@@ -1,5 +1,6 @@
 import time
 import os
+import logging
 import pickle
 import numpy as np
 import tensorflow.compat.v1 as tf
@@ -11,6 +12,8 @@ from collections import defaultdict
 import pprint
 
 
+logger = logging.getLogger(__name__)
+
 class Trainer:
 
     def __init__(self, model, optimizer, session):
@@ -18,7 +21,7 @@ class Trainer:
 
     @staticmethod
     def log(msg='', date=True):
-        print(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' ' + str(msg) if date else str(msg))
+        logger.info(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' ' + str(msg) if date else str(msg))
 
     def save(self, directory):
         saver = tf.train.Saver()

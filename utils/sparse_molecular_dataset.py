@@ -1,5 +1,6 @@
 import argparse
 
+import logging
 import pickle
 import numpy as np
 
@@ -14,6 +15,8 @@ else:
     from utils.progress_bar import ProgressBar
 
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -334,7 +337,7 @@ class SparseMolecularDataset():
 
     @staticmethod
     def log(msg='', date=True):
-        print(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' ' + str(msg) if date else str(msg))
+        logger.info(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' ' + str(msg) if date else str(msg))
 
     def __len__(self):
         return self.__len
