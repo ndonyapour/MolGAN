@@ -70,17 +70,19 @@ def is_valid_ligand(molecule: Chem.rdchem.RWMol) -> Tuple[bool, Chem.rdchem.RWMo
     """
     valid_lig = True
     
-    try:
-        Chem.SanitizeMol(molecule)
-    except rdkit.Chem.rdchem.KekulizeException as e:
-        valid_lig = False
-        # Not handling kekulization error now so just remove file to prevent DiffDock execution
-    except rdkit.Chem.rdchem.MolSanitizeException as e:
-        # can also be explicit valence error (i.e.) formal charge not consistent with bond topology
-        # choose to trust bond topology around atom and add formal charge based on that
-        molecule = adjust_formal_charges(molecule)
-    except Exception:  # pylint: disable=broad-exception-caught
-        # catch *all* exceptions rdkit can throw
+    # try:
+    #     Chem.SanitizeMol(molecule)
+    # except rdkit.Chem.rdchem.KekulizeException as e:
+    #     valid_lig = False
+    #     # Not handling kekulization error now so just remove file to prevent DiffDock execution
+    # except rdkit.Chem.rdchem.MolSanitizeException as e:
+    #     # can also be explicit valence error (i.e.) formal charge not consistent with bond topology
+    #     # choose to trust bond topology around atom and add formal charge based on that
+    #     molecule = adjust_formal_charges(molecule)
+    # except Exception:  # pylint: disable=broad-exception-caught
+    #     # catch *all* exceptions rdkit can throw
+    #     valid_lig = False
+    if Chem.SanitizeMol(molecule, catchErrors=True) != 0:
         valid_lig = False
 
     return valid_lig, molecule
